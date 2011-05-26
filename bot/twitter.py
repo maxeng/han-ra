@@ -1,0 +1,191 @@
+#/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import logging
+import random
+import re
+import yaml
+import oauth
+from datetime import datetime
+from model.ids import IDS
+from model.statuses import Statuses
+from django.utils import simplejson
+from google.appengine.api import memcache
+from google.appengine.api import urlfetch
+from google.appengine.ext import db
+from zenra import Zenra
+
+#ZENRIZE_COUNT = '10'
+ZENRIZE_COUNT = 'zenrize_count'
+
+class TwitBot:
+    def __init__(self):
+        # config.yamlから設定情報を取得
+        #     ---
+        #     bot:
+        #       consumer_key: ****************
+        #       consumer_secret: ********************************
+        #       access_token: ****************************************
+        #       access_token_secret: ********************************
+        config_data = yaml.load(open('../config.yaml'))
+        self.bot_config = config_data['bot']
+        self.client = oauth.TwitterClient(
+            self.bot_config['consumer_key'],
+            self.bot_config['consumer_secret'],
+            None)
+
+    # 自分のfriendsのデータを更新する
+    def friends(self):
+        url = 'http://api.twitter.com/1/friends/ids.json'
+        result = self.client.make_request(
+            url,
+            token   = self.bot_config['access_token'],
+            secret  = self.bot_config['access_token_secret'],
+            additional_params = None,
+            protected         = True,
+            method            = urlfetch.GET)
+        logging.debug(result.status_code)
+        logging.debug(result.content)
+        if result.status_code == 200:
+            ids = IDS.get()
+            ids.friends = result.content
+            ids.put()
+
+    # 自分のfollowersのデータを更新する
+    def followers(self):
+        url = 'http://api.twitter.com/1/followers/ids.json'
+        result = self.client.make_request(
+            url,
+            token   = self.bot_config['access_token'],
+            secret  = self.bot_config['access_token_secret'],
+            additional_params = None,
+            protected         = True,
+            method            = urlfetch.GET)
+        logging.debug(result.status_code)
+        logging.debug(result.content)
+        if result.status_code == 200:
+            ids = IDS.get()
+            ids.followers = result.content
+            ids.put()
+
+    # friends, followersの情報から、follow or unfollowする
+    def friendship(self):
+        ids = IDS.get()
+        friends   = set(simplejson.loads(ids.friends))
+        followers = set(simplejson.loads(ids.followers))
+        should_follow   = list(followers - friends)
+        should_unfollow = list(friends - followers)
+        random.shuffle(should_follow)
+        random.shuffle(should_unfollow)
+        logging.debug("should follow: %d" % len(should_follow))
+        logging.debug("should unfollow: %d" % len(should_unfollow))
+        # 繰り返し挑戦するので失敗してもタイムアウトになっても気にしない
+        while len(should_follow) > 0 or len(should_unfollow) > 0:
+            if len(should_follow) > 0:
+                url = 'http://api.twitter.com/1/friendships/create.json?user_id=%s' % should_follow.pop()
+                logging.debug(url)
+                result = self.client.make_request(
+                    url,
+                    token   = self.bot_config['access_token'],
+                    secret  = self.bot_config['access_token_secret'],
+                    additional_params = None,
+                    protected         = True,
+                    method            = urlfetch.POST)
+                if result.status_code != 200:
+                    logging.warn(result.content)
+            if len(should_unfollow) > 0:
+                url = 'http://api.twitter.com/1/friendships/destroy.json?user_id=%s' % should_unfollow.pop()
+                result = self.client.make_request(
+                    url,
+                    token   = self.bot_config['access_token'],
+                    secret  = self.bot_config['access_token_secret'],
+                    additional_params = None,
+                    protected         = True,
+                    method            = urlfetch.POST)
+                if result.status_code != 200:
+                    logging.warn(result.content)
+
+    # 何かをつぶやく
+    def update(self, status = None, in_reply_to = None):
+        count = Statuses.all().count()
+        if not status:
+            status = random.choice(Statuses.all().fetch(1000)).status
+        url  = 'http://api.twitter.com/1/statuses/update.json'
+        data = {
+            'status' : status.encode('utf-8'),
+            'in_reply_to_status_id' : in_reply_to,
+            }
+        result = self.client.make_request(
+            url,
+            token   = self.bot_config['access_token'],
+            secret  = self.bot_config['access_token_secret'],
+            additional_params = data,
+            protected         = True,
+            method            = urlfetch.POST)
+        logging.debug(result.status_code)
+        logging.debug(result.content)
+
+    # 発言を拾って半裸にする
+    def zenrize(self):
+        cache = memcache.decr(ZENRIZE_COUNT)
+        if cache:
+            logging.debug('count: %d' % cache)
+            return
+
+        url = 'http://api.twitter.com/1/statuses/home_timeline.json'
+        result = self.client.make_request(
+            url,
+            token   = self.bot_config['access_token'],
+            secret  = self.bot_config['access_token_secret'],
+            additional_params = { "count": 200 },
+            protected         = True,
+            method            = urlfetch.GET)
+        logging.debug(result.status_code)
+        if result.status_code == 200:
+            statuses = simplejson.loads(result.content)
+
+            # 次の実行時間を決定する
+            format = '%a %b %d %H:%M:%S +0000 %Y'
+            first = datetime.strptime(statuses[ 0]['created_at'], format)
+            last  = datetime.strptime(statuses[-1]['created_at'], format)
+            logging.debug('first : %s' % first)
+            logging.debug('last  : %s' % last)
+            logging.debug(first - last)
+            memcache.set(ZENRIZE_COUNT, (first - last).seconds * 2 / 60)
+
+            def judge(status):
+                # 自分の発言は除く
+#                if status['user']['screen_name'] == self.bot_config['username']:
+#                    return False
+                # 非公開の発言も除く
+                if status['user']['protected']:
+                    return False
+                # RTっぽい発言も除く
+                if re.search('RT[ :].*@\w+', status['text']):
+                    return False
+                # ハッシュタグっぽいものを含んでいる発言も除く
+                if re.search(u'[#＃]\w+', status['text']):
+                    return False
+                # 既に「半裸で」が含まれている発言も除く
+                if re.search(u'半裸で', status['text']):
+                    return False
+                # それ以外のものはOK
+                return True
+
+            # 残ったものからランダムに選択して半裸にする
+            candidate = filter(judge, statuses)
+            random.shuffle(candidate)
+            zenra = Zenra()
+            for status in candidate:
+                text = zenra.zenrize(status['text']).decode('utf-8')
+                # うまく半裸にできたものだけ投稿
+                if re.search(u'半裸で', text):
+                    logging.debug(text)
+                    self.update(status = u'半裸RT @%s: %s' % (
+                            status['user']['screen_name'],
+                            text,
+                            ), in_reply_to = status['id'])
+                    break
+        # 400が返ってきたときは10分間黙るようにしてみる
+        elif result.status_code == 400:
+            memcache.set(ZENRIZE_COUNT, 10)
