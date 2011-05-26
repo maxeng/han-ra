@@ -82,4 +82,4 @@ class Zenra:
             chunk_list.append(morphem_list)
 
         return text
-        print result.read()
+#        print result.read()

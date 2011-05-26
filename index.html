@@ -1,19 +1,45 @@
 <html>
-  <head>
-    <title>hanra_bot</title>
-  </head>
-  <body>
-    <img src="/zen-ra.png" height="100" width="100">
-    <h2>半裸bot</h2>
-    <div>
-      <a href="http://twitter.com/hanra_bot">http://twitter.com/hanra_bot</a>
-      <ul>
-        <li>フォロー返しは自動です。</li>
-        <li>フォロワーの発言を適当に拾って半裸にします。</li>
-        <li>Google App Engine(Python)</li>
-      </ul>
-      作者：<a href="http://twitter.com/firelabi">@firelabi</a><br>
-      <a href="http://firela.biz/">Firela.Biz</a>
-    </div>
-  </body>
+	<head>
+		<title>hanra_bot</title>
+		<meta content="True" name="HandheldFriendly" />
+		<meta content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;" name="viewport" />
+		<script src="http://platform.twitter.com/anywhere.js?id=bvw4RniZzCsUt6ldDjAdw&amp;v=1"></script>
+		<script type="text/javascript">
+			twttr.anywhere( function(twitter) {
+				twitter.hovercards();
+			});
+		</script>
+	</head>
+	<body>
+		<img src="/han-ra.png" height="100" width="100">
+		<h2>ﾊﾝﾗｰbot</h2>
+		<div>
+			<span id="follow-twitterapi"></span>
+			<script type="text/javascript">
+				twttr.anywhere( function (T) {
+					T('#follow-twitterapi').followButton("hanra_bot");
+				});
+			</script>
+			<ul>
+				<li>
+					フォロー返しは自動です。
+				</li>
+				<li>
+					フォロワーの発言を適当に拾って半裸にしてRTします。
+				</li>
+				<li>
+					改変RTなので笑って流せる人推奨
+				</li>
+				<li>
+					<a href="http://zen-ra.appspot.com/">全裸bot</a>をベースに改造しました
+				</li>
+				<li>
+					Google App Engine(Python)
+				</li>
+			</ul>
+			<a href="http://twitter.com/firelabi">@firelabi</a>
+			<br>
+			<a href="http://firela.biz/">Firela.Biz</a>
+		</div>
+	</body>
 </html>

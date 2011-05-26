@@ -130,7 +130,7 @@ class TwitBot:
         cache = memcache.decr(ZENRIZE_COUNT)
         if cache:
             logging.debug('count: %d' % cache)
-            return
+#            return
 
         url = 'http://api.twitter.com/1/statuses/home_timeline.json'
         result = self.client.make_request(
@@ -154,6 +154,10 @@ class TwitBot:
             memcache.set(ZENRIZE_COUNT, (first - last).seconds * 2 / 60)
 
             def judge(status):
+                # 過去発言は繰り返さない
+#                reply_ids = Statuses.all()
+#                if status['id']:
+#                    return False
                 # 自分の発言は除く
 #                if status['user']['screen_name'] == self.bot_config['username']:
 #                    return False
@@ -176,15 +180,23 @@ class TwitBot:
             candidate = filter(judge, statuses)
             random.shuffle(candidate)
             zenra = Zenra()
+            
             for status in candidate:
                 text = zenra.zenrize(status['text']).decode('utf-8')
                 # うまく半裸にできたものだけ投稿
                 if re.search(u'半裸で', text):
-                    logging.debug(text)
+                    tweeted = Statuses()
+                    tweeted.status = text
+                    tweeted.in_reply_to = status['id']
+                    tweeted.put()
+                    
                     self.update(status = u'半裸RT @%s: %s' % (
                             status['user']['screen_name'],
                             text,
                             ), in_reply_to = status['id'])
+
+                    logging.debug(text)
+
                     break
         # 400が返ってきたときは10分間黙るようにしてみる
         elif result.status_code == 400:

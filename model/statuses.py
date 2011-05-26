@@ -6,6 +6,7 @@ from google.appengine.ext import db
 
 class Statuses(db.Model):
     status = db.StringProperty()
+    in_reply_to = db.IntegerProperty()
     date = db.DateTimeProperty(auto_now_add=True)
     @property
     def jst_date(self):
