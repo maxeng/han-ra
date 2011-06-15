@@ -183,19 +183,13 @@ class TwitBot:
 #                reply_ids = Statuses.all()
 #                if status['id']:
 #                    return False
-                # 自分の発言は除く
-#                if status['user']['screen_name'] == self.bot_config['username']:
-#                    return False
+
                 # 非公開の発言も除く
                 if status['user']['protected']:
                     return False
-                
-                # URL付きも除く
-#                if re.search('http://', status['text']):
-#                    return False
+                # 120文字以上の発言は除く
                 if len(status['text']) > 120:
                     return False
-
                 # RTっぽい発言も除く
                 if re.search('RT[ :].*@\w+', status['text']):
                     return False
@@ -215,20 +209,12 @@ class TwitBot:
             
             for status in candidate:
                 text = hanra.hanrize(status['text']).decode('utf-8')
-
                 
-                # URLを消去
-#                pat1 = re.compile(r'(http|ftp|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-\.,@?^=%&amp;:/~\+#]*[\w\-\@?^=%&amp;/~\+#])?', re.IGNORECASE | re.DOTALL)
-#                pat1.sub('(http|ftp|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-\.,@?^=%&amp;:/~\+#]*[\w\-\@?^=%&amp;/~\+#])?',
-#                       '',
-#                       text)
-#                re.sub('\n','',text)
-
                 # BadValueError: Property status is not multi-line 対策
                 text = text.strip('\t\n\x0b\x0c\r')
                 
                 # うまく半裸にできたもの かつ 120文字まで
-                if re.search(u'半裸で', text):# and len(text) < 120:
+                if re.search(u'半裸で', text):    # and len(text) < 120:
                     logging.debug(text)
 
                     rep_id = status['id']

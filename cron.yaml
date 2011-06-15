@@ -5,12 +5,12 @@ cron:
 - description: update followers
   url: /bot/twitter?action=followers
   schedule: every 10 minutes
-- description: update friendships
-  url: /bot/twitter?action=friendship
+- description: update refollow
+  url: /bot/twitter?action=refollow
   schedule: every 30 minutes
 #- description: update myself
 #  url: /bot/twitter?action=update
 #  schedule: every 30 hours
-- description: zenrize friends' status
-  url: /bot/twitter?action=zenrize
-  schedule: every 10 minutes
+- description: hanrize friends' status
+  url: /bot/twitter?action=hanrize
+  schedule: every 30 minutes

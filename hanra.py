@@ -18,7 +18,6 @@ from xml.etree import ElementTree
 import urllib
 import yaml
 
-
 class Hanra:
     def __init__(self, appid = None):
         # config.yamlから設定情報を取得
