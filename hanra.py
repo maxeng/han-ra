@@ -12,14 +12,14 @@ NOUN = u'名詞'
 AUXI = u'助動詞'
 CONJ = u'接続助詞'
 SURU = u'助動詞する'
-ZENRA = u'半裸で'.encode('utf-8')
+HANRA = u'半裸で'.encode('utf-8')
 
 from xml.etree import ElementTree
 import urllib
 import yaml
 
 
-class Zenra:
+class Hanra:
     def __init__(self, appid = None):
         # config.yamlから設定情報を取得
         #     ---
@@ -30,7 +30,7 @@ class Zenra:
             self.appid = config_data['appid']
         self.url   = 'http://jlp.yahooapis.jp/DAService/V1/parse'
         
-    def zenrize(self, sentence):
+    def hanrize(self, sentence):
         postdata = {
             'appid'    : self.appid,
             'sentence' : sentence.encode('utf-8'),
@@ -68,13 +68,13 @@ class Zenra:
                 except IndexError:
                     pass
                 if should_insert:
-                        text += ZENRA
+                        text += HANRA
             # 動詞が含まれていなくても、名詞→助動詞する の組み合わせがあれば挿入する
             else:
                 for i in range(len(morphem_list) - 1):
                     if (morphem_list[i]['feature'][0] == NOUN and
                         morphem_list[i + 1]['feature'][1] == SURU):
-                        text += ZENRA
+                        text += HANRA
 
             for morphem in morphem_list:
                 text += morphem['surface']

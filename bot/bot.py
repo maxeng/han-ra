@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import logging
@@ -18,9 +18,10 @@ class TwitterHandler(RequestHandler):
         self.action = {
             'friends'   : twit.friends,
             'followers' : twit.followers,
-            'friendship': twit.friendship,
+            'refollow'  : twit.refollow,
+#            'friendship': twit.friendship,
             'update'    : twit.update,
-            'zenrize'   : twit.zenrize,
+            'hanrize'   : twit.hanrize,
             }
 
     def get(self):
